@@ -1,0 +1,65 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: "I don’t currently see any pods in **CrashLoopBackOff** from the cluster-wide\
+      \ pod listing (the output is large/truncated, but no CrashLooping pods are evident\
+      \ in the portion returned). The **events** we pulled also don’t show a `BackOff`/`CrashLoopBackOff`\
+      \ pattern; they mostly show normal control-plane activity plus some transient\
+      \ kube-apiserver guard readiness probe warnings.\n\nWhat I *do* see:\n- Two\
+      \ pods in **Error** state (not CrashLooping):\n  - `openshift-kube-controller-manager/installer-4-ip-10-0-14-159...`\n\
+      \  - `openshift-kube-controller-manager/installer-4-retry-1-ip-10-0-14-159...`\n\
+      \  These are old installer pods; they can be benign leftovers depending on upgrade\
+      \ history, but we should confirm why they’re Error.\n\nTo investigate the **KubePodCrashLooping**\
+      \ alert precisely, I need either:\n1) The **alert details** (namespace/pod/container)\
+      \ from Alertmanager/console, **or**\n2) Which namespace/workload you suspect.\n\
+      \nIf you provide the pod name/namespace from the alert, I’ll pull:\n- `oc describe\
+      \ pod` equivalent (pod details + last termination reason)\n- `oc logs` and `oc\
+      \ logs -p` (previous crash)\n- related events in that namespace\n\nReply with\
+      \ the **pod + namespace** from the KubePodCrashLooping alert."
+    tool_calls:
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Failed
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 114ae312-b12b-447c-8ae6-d9d5f437743a
+    api_input_tokens: 67390
+    api_output_tokens: 308
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

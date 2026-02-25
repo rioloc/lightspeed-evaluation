@@ -1,0 +1,84 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: 'I don’t currently see any pods in **CrashLoopBackOff**, so there’s
+      no active **KubePodCrashLooping** condition to investigate from the data returned.
+
+
+      What I *do* see:
+
+      - A **kube-apiserver-guard** readiness probe transiently failing with **HTTP
+      500** (`Reason=ProbeError/Unhealthy`) during a kube-apiserver revision rollout.
+      This is typically **not** CrashLooping; it’s a readiness failure while the apiserver
+      is coming up.
+
+      - At least one **installer** pod in `openshift-kube-controller-manager` shows
+      as not running (output truncated), which is usually normal for revision installers
+      (they complete/exit).
+
+
+      To pinpoint the KubePodCrashLooping alert, tell me **which namespace/pod** it
+      reports. Or run/provide:
+
+      - `oc get pod -A | egrep -i ''CrashLoopBackOff|Error''`
+
+
+      If you paste the flagged pod name/namespace, I’ll pull:
+
+      - `oc describe pod ...`
+
+      - `oc logs ... --previous`
+
+      - related events for that pod, and give the root cause + fix.'
+    tool_calls:
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: list_metrics
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Failed
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Pending
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: cd2fc8fc-c7ec-4229-9210-f076f35b27a4
+    api_input_tokens: 107075
+    api_output_tokens: 241
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

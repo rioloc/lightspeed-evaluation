@@ -1,0 +1,255 @@
+conversation_group_id,turn_id,metric_identifier,score,result,reason,query,response,execution_time
+OOM,Investigate OOM,custom:answer_correctness,0.2,FAIL,"Custom answer correctness: 0.20 - The expected response identifies a specific root cause: the pod’s app container is OOMKilled because it intentionally leaks memory (~1MB/sec) while constrained by a 60Mi limit (Python appending forever in deployment `awesome-application`). The given response does not diagnose this specific cause, does not mention the 60Mi limit, the deliberate leak, the deployment name, or the Python behavior. Instead, it provides a generic troubleshooting runbook and asks for more details. While it correctly includes OOMKilled as a common CrashLoopBackOff cause and suggests increasing memory limits (which could be relevant), it does not align with the expected concrete investigation outcome and is incomplete relative to what was asked/expected. It also contains no direct contradictions, just a lack of the required specific conclusion.",Investigate the KubePodCrashLooping,"Which cluster/namespace/pod is showing **KubePodCrashLooping**? I need at least one of these to investigate precisely.
+
+Meanwhile, here’s the fastest OpenShift runbook to identify root cause and fix.
+
+## 1) Identify the crashing pod(s)
+```bash
+oc get events -A --field-selector reason=KubePodCrashLooping -o wide
+# or quickly find restarts
+oc get pods -A --sort-by=.status.containerStatuses[0].restartCount
+```
+
+## 2) Describe the pod (often shows the real error)
+```bash
+oc -n <ns> describe pod <pod>
+```
+Look for:
+- **Last State / Exit Code / Reason** (e.g., OOMKilled, Error)
+- **Readiness/Liveness probe failures**
+- **FailedMount / ImagePull errors / permission denied**
+
+## 3) Check container logs (current + previous)
+CrashLoopBackOff usually requires **previous** logs:
+```bash
+oc -n <ns> logs <pod> -c <container>
+oc -n <ns> logs <pod> -c <container> --previous
+```
+
+## 4) Common causes → quickest fixes
+
+### A) App exits immediately (exit code 1/2/…)
+- Misconfig (env var/secret/configmap), bad args/command, missing file.
+Fix:
+- Verify env/args:
+  ```bash
+  oc -n <ns> get pod <pod> -o jsonpath='{.spec.containers[*].command}{"" ""}{.spec.containers[*].args}{""\n""}'
+  ```
+- Validate referenced secrets/configmaps exist.
+
+### B) **OOMKilled** (exit code 137)
+- Memory limit too low or leak.
+Fix:
+- Increase memory limit/requests, or reduce app memory usage.
+Check:
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'oomkilled|exit code|reason'
+```
+
+### C) Probe failures (liveness/readiness)
+- Probe path/port wrong, startup too slow, TLS mismatch.
+Fix:
+- Increase `initialDelaySeconds`/`timeoutSeconds`, use `startupProbe`, correct port/path.
+Evidence is in `describe pod` events: “Liveness probe failed…”.
+
+### D) Image issues
+- ImagePullBackOff / ErrImagePull, auth, wrong tag, architecture mismatch.
+Fix:
+- Check pull secret/Quay credentials, image reference, node arch.
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'pull|image|back-off|unauthorized'
+```
+
+### E) Permissions / SCC / filesystem read-only
+- “permission denied”, cannot write to volume, SCC mismatch.
+Fix:
+- Use writable volumeMount, correct UID/fsGroup, adjust SCC via serviceaccount (carefully).
+Check events + logs.
+
+### F) Dependency not reachable (DB/endpoint)
+- App crashes because it can’t reach DB/Kafka/etc.
+Fix:
+- Confirm service/DNS, network policies, secrets, routes.
+Quick test from same namespace:
+```bash
+oc -n <ns> run -it --rm netdebug --image=registry.access.redhat.com/ubi9/ubi -- bash
+```
+(Then test `curl`, `dig`, etc.)
+
+## Send me this and I’ll pinpoint it
+Paste:
+1) `oc -n <ns> describe pod <pod>` (events + last state section)  
+2) `oc -n <ns> logs <pod> -c <container> --previous`  
+3) Output of `oc get pod -n <ns> <pod> -o wide`
+
+With that, I can tell you the exact failure mode and the minimal change to stop the CrashLoop.",3.712
+OOM,Investigate OOM,geval:generic_troubleshooting_experience,0.2,FAIL,"The response is mostly a generic troubleshooting runbook with many oc commands and requests for more details, rather than being based on the provided cluster evidence in the context. It does mention OOMKilled/exit code 137 as a possible cause and suggests increasing memory limits, but it fails to identify the specific stated issue: the awesome-application is CrashLoopBackOff due to an OOM kill from a memory leak in the deployment command. It also violates the context requirement to avoid hints/commands by extensively instructing what to run, and does not directly propose correcting the leaking deployment command beyond generic guidance.",Investigate the KubePodCrashLooping,"Which cluster/namespace/pod is showing **KubePodCrashLooping**? I need at least one of these to investigate precisely.
+
+Meanwhile, here’s the fastest OpenShift runbook to identify root cause and fix.
+
+## 1) Identify the crashing pod(s)
+```bash
+oc get events -A --field-selector reason=KubePodCrashLooping -o wide
+# or quickly find restarts
+oc get pods -A --sort-by=.status.containerStatuses[0].restartCount
+```
+
+## 2) Describe the pod (often shows the real error)
+```bash
+oc -n <ns> describe pod <pod>
+```
+Look for:
+- **Last State / Exit Code / Reason** (e.g., OOMKilled, Error)
+- **Readiness/Liveness probe failures**
+- **FailedMount / ImagePull errors / permission denied**
+
+## 3) Check container logs (current + previous)
+CrashLoopBackOff usually requires **previous** logs:
+```bash
+oc -n <ns> logs <pod> -c <container>
+oc -n <ns> logs <pod> -c <container> --previous
+```
+
+## 4) Common causes → quickest fixes
+
+### A) App exits immediately (exit code 1/2/…)
+- Misconfig (env var/secret/configmap), bad args/command, missing file.
+Fix:
+- Verify env/args:
+  ```bash
+  oc -n <ns> get pod <pod> -o jsonpath='{.spec.containers[*].command}{"" ""}{.spec.containers[*].args}{""\n""}'
+  ```
+- Validate referenced secrets/configmaps exist.
+
+### B) **OOMKilled** (exit code 137)
+- Memory limit too low or leak.
+Fix:
+- Increase memory limit/requests, or reduce app memory usage.
+Check:
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'oomkilled|exit code|reason'
+```
+
+### C) Probe failures (liveness/readiness)
+- Probe path/port wrong, startup too slow, TLS mismatch.
+Fix:
+- Increase `initialDelaySeconds`/`timeoutSeconds`, use `startupProbe`, correct port/path.
+Evidence is in `describe pod` events: “Liveness probe failed…”.
+
+### D) Image issues
+- ImagePullBackOff / ErrImagePull, auth, wrong tag, architecture mismatch.
+Fix:
+- Check pull secret/Quay credentials, image reference, node arch.
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'pull|image|back-off|unauthorized'
+```
+
+### E) Permissions / SCC / filesystem read-only
+- “permission denied”, cannot write to volume, SCC mismatch.
+Fix:
+- Use writable volumeMount, correct UID/fsGroup, adjust SCC via serviceaccount (carefully).
+Check events + logs.
+
+### F) Dependency not reachable (DB/endpoint)
+- App crashes because it can’t reach DB/Kafka/etc.
+Fix:
+- Confirm service/DNS, network policies, secrets, routes.
+Quick test from same namespace:
+```bash
+oc -n <ns> run -it --rm netdebug --image=registry.access.redhat.com/ubi9/ubi -- bash
+```
+(Then test `curl`, `dig`, etc.)
+
+## Send me this and I’ll pinpoint it
+Paste:
+1) `oc -n <ns> describe pod <pod>` (events + last state section)  
+2) `oc -n <ns> logs <pod> -c <container> --previous`  
+3) Output of `oc get pod -n <ns> <pod> -o wide`
+
+With that, I can tell you the exact failure mode and the minimal change to stop the CrashLoop.",3.173
+OOM,Investigate OOM,geval:k8s_oom_root_cause_analysis,0.4,FAIL,"The response does mention OOMKilled, Out of Memory, and exit code 137, aligning with the context that the pod is crashing due to an OOM kill. However, it does not mention any specific memory limit or usage rate. It also fails to clearly identify the stated root cause (memory leakage in the deployment command) as the definitive cause, presenting it only as a possibility. Finally, it heavily focuses on generic troubleshooting and provides multiple commands to run, which contradicts the context requirement to avoid command hints and instead directly point out the issue and solution.",Investigate the KubePodCrashLooping,"Which cluster/namespace/pod is showing **KubePodCrashLooping**? I need at least one of these to investigate precisely.
+
+Meanwhile, here’s the fastest OpenShift runbook to identify root cause and fix.
+
+## 1) Identify the crashing pod(s)
+```bash
+oc get events -A --field-selector reason=KubePodCrashLooping -o wide
+# or quickly find restarts
+oc get pods -A --sort-by=.status.containerStatuses[0].restartCount
+```
+
+## 2) Describe the pod (often shows the real error)
+```bash
+oc -n <ns> describe pod <pod>
+```
+Look for:
+- **Last State / Exit Code / Reason** (e.g., OOMKilled, Error)
+- **Readiness/Liveness probe failures**
+- **FailedMount / ImagePull errors / permission denied**
+
+## 3) Check container logs (current + previous)
+CrashLoopBackOff usually requires **previous** logs:
+```bash
+oc -n <ns> logs <pod> -c <container>
+oc -n <ns> logs <pod> -c <container> --previous
+```
+
+## 4) Common causes → quickest fixes
+
+### A) App exits immediately (exit code 1/2/…)
+- Misconfig (env var/secret/configmap), bad args/command, missing file.
+Fix:
+- Verify env/args:
+  ```bash
+  oc -n <ns> get pod <pod> -o jsonpath='{.spec.containers[*].command}{"" ""}{.spec.containers[*].args}{""\n""}'
+  ```
+- Validate referenced secrets/configmaps exist.
+
+### B) **OOMKilled** (exit code 137)
+- Memory limit too low or leak.
+Fix:
+- Increase memory limit/requests, or reduce app memory usage.
+Check:
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'oomkilled|exit code|reason'
+```
+
+### C) Probe failures (liveness/readiness)
+- Probe path/port wrong, startup too slow, TLS mismatch.
+Fix:
+- Increase `initialDelaySeconds`/`timeoutSeconds`, use `startupProbe`, correct port/path.
+Evidence is in `describe pod` events: “Liveness probe failed…”.
+
+### D) Image issues
+- ImagePullBackOff / ErrImagePull, auth, wrong tag, architecture mismatch.
+Fix:
+- Check pull secret/Quay credentials, image reference, node arch.
+```bash
+oc -n <ns> describe pod <pod> | egrep -i 'pull|image|back-off|unauthorized'
+```
+
+### E) Permissions / SCC / filesystem read-only
+- “permission denied”, cannot write to volume, SCC mismatch.
+Fix:
+- Use writable volumeMount, correct UID/fsGroup, adjust SCC via serviceaccount (carefully).
+Check events + logs.
+
+### F) Dependency not reachable (DB/endpoint)
+- App crashes because it can’t reach DB/Kafka/etc.
+Fix:
+- Confirm service/DNS, network policies, secrets, routes.
+Quick test from same namespace:
+```bash
+oc -n <ns> run -it --rm netdebug --image=registry.access.redhat.com/ubi9/ubi -- bash
+```
+(Then test `curl`, `dig`, etc.)
+
+## Send me this and I’ll pinpoint it
+Paste:
+1) `oc -n <ns> describe pod <pod>` (events + last state section)  
+2) `oc -n <ns> logs <pod> -c <container> --previous`  
+3) Output of `oc get pod -n <ns> <pod> -o wide`
+
+With that, I can tell you the exact failure mode and the minimal change to stop the CrashLoop.",2.869
+OOM,,deepeval:conversation_completeness,1.0,PASS,"The score is 1.0 because the LLM response fully supports the User’s goal to investigate and troubleshoot a KubePodCrashLooping/CrashLoopBackOff issue in an OpenShift/Kubernetes environment, identifying root cause and corrective actions, with no noted missing steps or unmet requirements (no gaps were reported).",,,4.526
+OOM,,deepeval:conversation_relevancy,1.0,PASS,"The score is 1.0 because there are no listed irrelevancies ([]), meaning no 'assistant' message is quoted as irrelevant and no mismatched information is identified anywhere in the conversation.",,,2.983

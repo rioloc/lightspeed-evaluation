@@ -1,0 +1,20 @@
+- conversation_group_id: OOM
+
+  turns:
+
+  - turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    contexts:
+      - "The awesome-application is in CrashLoopBackOff due to OOM kill"
+      - "The awesome-application is in out of memory due a memory leakage in the deployment command"
+      - "The responses should not include hints or suggestions to the user on what command to run and how. \
+        The preferred response, the ones that should get a better score, are the ones which points out an issue, and 
+        possibly also a solution to address that"
+    expected_response: |
+      Root cause: the app container is being OOMKilled due to a deliberate memory leak in the pod command, while the container has a 60Mi memory limit. 
+      Deployment awesome-application runs Python that appends ~1MB/sec forever.
+
+    turn_metrics:
+      - "custom:answer_correctness"
+      - "geval:generic_troubleshooting_experience"
+      - "geval:k8s_oom_root_cause_analysis"

@@ -1,0 +1,105 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: 'The **KubePodCrashLooping** alert is **firing for 2 pods** in **namespace
+      `openshift-lightspeed`**:
+
+
+      - `awesome-application-7c5f7df47f-2hkqm` (container `app`)
+
+      - `awesome-application-7c5f7df47f-qhj9r` (container `app`)
+
+
+      ### What’s happening (root cause)
+
+      Both pods are being **OOMKilled** and then restarted, leading to **CrashLoopBackOff**.
+
+
+      Evidence from pod status:
+
+      - `lastState.terminated.reason: OOMKilled`
+
+      - `exitCode: 137`
+
+      - Container has **memory limit 60Mi**
+
+      - The container command is a Python loop that continuously allocates memory
+      (`data.append("x"*1000000)`), i.e. an intentional **memory leak**.
+
+
+      Events confirm the loop:
+
+      - `Back-off restarting failed container app ... Reason: BackOff`
+
+
+      ### Fix options
+
+      1. **Fix the application** (stop unbounded memory growth) — the correct solution.
+
+      2. If this is just a demo/test workload: **increase memory limits/requests**
+      to avoid OOMKills (won’t fix the leak, only delays failure).
+
+      3. If you just want the alert to stop: **scale down or delete** the workload
+      running these pods (Deployment/ReplicaSet behind `awesome-application`).
+
+
+      Tell me which outcome you want (repair app vs raise limits vs stop workload),
+      and if you want I can pull the owning Deployment/ReplicaSet and propose the
+      exact patch.'
+    tool_calls:
+    - - tool_name: list_metrics
+        arguments: {}
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: execute_instant_query
+        arguments:
+          query: ALERTS{alertname="KubePodCrashLooping",alertstate="firing"}
+    - - tool_name: pods_get
+        arguments:
+          name: awesome-application-7c5f7df47f-2hkqm
+          namespace: openshift-lightspeed
+    - - tool_name: pods_get
+        arguments:
+          name: awesome-application-7c5f7df47f-qhj9r
+          namespace: openshift-lightspeed
+    - - tool_name: events_list
+        arguments:
+          namespace: openshift-lightspeed
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 25d5c930-cb0d-4b11-9321-50cb60e8f5f8
+    api_input_tokens: 80052
+    api_output_tokens: 331
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

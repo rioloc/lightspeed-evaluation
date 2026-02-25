@@ -1,0 +1,85 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: 'I don’t currently see any pods in **CrashLoopBackOff** from the cluster-wide
+      pod listing we pulled (the output is truncated, but nothing shown indicates
+      CrashLooping), and the recent events returned are mostly **normal** (cert rotation
+      / controller-manager rollout), not crash-loop warnings.
+
+
+      To investigate **KubePodCrashLooping** precisely, I need the alert’s target:
+
+      - Which **namespace/pod** is reported in the alert label set? (e.g., `namespace=...
+      pod=... container=...`)
+
+      - Or paste the **Alertmanager notification** / the alert’s labels/annotations.
+
+
+      Meanwhile, quickest way to identify crash-looping pods in-cluster:
+
+
+      ```bash
+
+      # Find pods with a crash-looping container
+
+      oc get pods -A | egrep -i ''CrashLoopBackOff|Error''
+
+
+      # Show restarts (often easiest signal)
+
+      oc get pods -A --sort-by=.status.containerStatuses[0].restartCount
+
+      ```
+
+
+      Once you provide the pod name/namespace, I’ll drill into:
+
+      1) `oc describe pod` (to get last termination reason/exit code)
+
+      2) `oc logs --previous` (to get the crash logs)
+
+      3) related events (image pull, OOMKilled, config/secret mount, probe failures)
+      and propose the fix.'
+    tool_calls:
+    - - tool_name: list_metrics
+        arguments: {}
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 1de87166-f3b4-4ea1-877e-e136fe49b031
+    api_input_tokens: 34249
+    api_output_tokens: 275
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

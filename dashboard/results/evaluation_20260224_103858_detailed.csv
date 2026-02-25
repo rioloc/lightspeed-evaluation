@@ -1,0 +1,54 @@
+conversation_group_id,turn_id,metric_identifier,score,result,reason,query,response,execution_time
+OOM,Investigate OOM,custom:answer_correctness,0.0,FAIL,"Custom answer correctness: 0.00 - The response does not identify the actual root cause expected for the KubePodCrashLooping alert. The expected diagnosis is that the `awesome-application` container is repeatedly crashing due to **OOMKilled** from a deliberate memory leak (Python appending ~1MB/sec) while constrained by a **60Mi memory limit**, which would directly produce CrashLoopBackOff/CrashLooping behavior.",Investigate the KubePodCrashLooping,"No pods are currently in **CrashLoopBackOff** (the usual symptom behind the *KubePodCrashLooping* alert) in the data I can see.
+
+What I *do* see:
+
+- **Failed pods (not CrashLooping)** in `openshift-kube-controller-manager`:
+  - `installer-4-ip-10-0-14-159...` **Status: Error**
+  - `installer-4-retry-1-ip-10-0-14-159...` **Status: Error**
+  These are static-pod “installer” jobs from an older revision; they can remain in Error after retries and often don’t indicate an active outage by themselves.
+
+- **Warnings** for `openshift-kube-apiserver` guard pods:
+  - `kube-apiserver-guard-...` readiness probe returned **HTTP 500** at one point, but later events show kube-apiserver successfully moved to **revision 9** on all masters, suggesting this was transient during rollout.
+
+To investigate the *actual* **KubePodCrashLooping** alert source, I need the specific pod(s) firing it. Please provide one of:
+- The **alert details** (namespace/pod/container), or
+- Output of: `oc get pods -A | egrep -i 'crashloop|error|backoff'`
+
+If you share the namespace/pod name, I’ll pull `describe` + previous container logs and identify the exact crash reason and fix.",3.686
+OOM,Investigate OOM,geval:generic_troubleshooting_experience,0.2,FAIL,"The response relies on generic investigation guidance and partial cluster observations (no CrashLoopBackOff seen, mentions unrelated installer and guard pod events) rather than focusing on the provided context that an application is CrashLoopBackOff due to OOMKill/memory leak. It does not identify the OOM/memory leak issue or propose a concrete fix (e.g., adjust memory limits/requests or address the leak). It also violates the constraint by suggesting specific commands to run (oc get pods, describe/logs).",Investigate the KubePodCrashLooping,"No pods are currently in **CrashLoopBackOff** (the usual symptom behind the *KubePodCrashLooping* alert) in the data I can see.
+
+What I *do* see:
+
+- **Failed pods (not CrashLooping)** in `openshift-kube-controller-manager`:
+  - `installer-4-ip-10-0-14-159...` **Status: Error**
+  - `installer-4-retry-1-ip-10-0-14-159...` **Status: Error**
+  These are static-pod “installer” jobs from an older revision; they can remain in Error after retries and often don’t indicate an active outage by themselves.
+
+- **Warnings** for `openshift-kube-apiserver` guard pods:
+  - `kube-apiserver-guard-...` readiness probe returned **HTTP 500** at one point, but later events show kube-apiserver successfully moved to **revision 9** on all masters, suggesting this was transient during rollout.
+
+To investigate the *actual* **KubePodCrashLooping** alert source, I need the specific pod(s) firing it. Please provide one of:
+- The **alert details** (namespace/pod/container), or
+- Output of: `oc get pods -A | egrep -i 'crashloop|error|backoff'`
+
+If you share the namespace/pod name, I’ll pull `describe` + previous container logs and identify the exact crash reason and fix.",3.163
+OOM,Investigate OOM,geval:k8s_oom_root_cause_analysis,0.2,FAIL,"The response does not mention OOMKill, out-of-memory, or exit code 137, despite the context stating the application is CrashLoopBackOff due to an OOM kill. It also fails to reference any specific memory limit/usage rate. Instead of identifying the stated root cause (memory leak in the deployment command), it focuses on other pods and asks for more details, and it provides no concrete fix for the memory leak/OOM scenario.",Investigate the KubePodCrashLooping,"No pods are currently in **CrashLoopBackOff** (the usual symptom behind the *KubePodCrashLooping* alert) in the data I can see.
+
+What I *do* see:
+
+- **Failed pods (not CrashLooping)** in `openshift-kube-controller-manager`:
+  - `installer-4-ip-10-0-14-159...` **Status: Error**
+  - `installer-4-retry-1-ip-10-0-14-159...` **Status: Error**
+  These are static-pod “installer” jobs from an older revision; they can remain in Error after retries and often don’t indicate an active outage by themselves.
+
+- **Warnings** for `openshift-kube-apiserver` guard pods:
+  - `kube-apiserver-guard-...` readiness probe returned **HTTP 500** at one point, but later events show kube-apiserver successfully moved to **revision 9** on all masters, suggesting this was transient during rollout.
+
+To investigate the *actual* **KubePodCrashLooping** alert source, I need the specific pod(s) firing it. Please provide one of:
+- The **alert details** (namespace/pod/container), or
+- Output of: `oc get pods -A | egrep -i 'crashloop|error|backoff'`
+
+If you share the namespace/pod name, I’ll pull `describe` + previous container logs and identify the exact crash reason and fix.",2.327
+OOM,,deepeval:conversation_completeness,0.0,FAIL,"The score is 0.0 because the LLM response did not fulfill the User’s intention to investigate and troubleshoot the KubePodCrashLooping alert: it explicitly stated, ""No pods are currently in CrashLoopBackOff... in the data I can see"" and deferred the core work by asking for more details, ""To investigate the actual KubePodCrashLooping alert source, I need the specific pod(s) firing it."" This leaves the alert’s cause unidentified and provides no concrete troubleshooting outcome for the specific firing source.",,,6.687
+OOM,,deepeval:conversation_relevancy,1.0,PASS,"The score is 1.0 because no irrelevancies were identified (the irrelevancies list is empty: []), so there are no quoted assistant messages or specific information that diverged from the user’s messages.",,,2.452

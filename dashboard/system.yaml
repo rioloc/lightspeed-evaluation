@@ -1,0 +1,157 @@
+# LightSpeed Evaluation Framework Configuration
+
+# LLM Configuration
+llm:
+  provider: "openai"          # Judge LLM Provider (openai, gemini etc..)
+  model: "gpt-5"            # Model name for the provider
+  temperature: 0.0            # Generation temperature
+  max_tokens: 5000             # Maximum tokens in response
+  timeout: 300                # Request timeout in seconds
+  num_retries: 3              # Retry attempts
+  cache_enabled: false        # rioloc: disable cache
+
+# API Configuration
+# Only query endpoint is supported
+api:
+  enabled: true                        # Enable API calls instead of using pre-filled data
+  api_base: http://localhost:8080      # Base API URL
+  endpoint_type: query                 # Use "streaming" or "query" endpoint
+  timeout: 300                         # API request timeout in seconds
+
+  # API input configuration
+  provider: "my_openai"                # LLM provider for queries
+  model: "gpt-5"                     # Model to use for queries
+  no_tools: null                       # Whether to bypass tools and MCP servers (optional)
+  system_prompt: null                  # System prompt (default None)
+  cache_enabled: false
+
+embedding:
+  cache_enabled: false
+
+  # Authentication via API_KEY environment variable only for MCP server
+
+# Default metrics metadata
+metrics_metadata:
+  # Turn-level metrics metadata
+  turn_level:
+
+    "ragas:response_relevancy":
+      description: "How relevant the response is to the question"
+      default: true  # This metric is applied by default when no turn_metrics specified
+
+    "ragas:faithfulness":
+      description: "How faithful the response is to the provided context"
+      default: false  # By default the value is false
+
+    # Custom metrics
+    "custom:answer_correctness":
+      description: "Correctness vs expected answer using custom LLM evaluation"
+      default: true
+
+    "geval:generic_troubleshooting_experience":
+      criteria: |
+        The response must be evaluated based on the following points:
+          - The agent which is answering is a Troubleshooting Agent, and its ability to be helpful in the troubleshooting must be evaluated
+          - The response must include real data evidence retrieved by tool and should not rely on generic or suggestions to address a generic problem 
+          - The output of the response is the result of one or more tool calls that allow the agent to retrieve the real cluster information
+          - Evidences pointing to real cluster resources must be provided otherwise the response is only supposition or suggestions. This is the worst case that must be penalized a lot
+      evaluation_params:
+        - query
+        - response
+        - contexts
+      evaluation_steps:
+        - "Step 1: Check if the response is based on real cluster evidence or is just providing generic suggestions to a problem. In the latter the test MUST fail, otherwise go to next step."
+        - "Step 2: Check if the response contains an analysis related to the query content"
+        - "Step 3: Check if the response was able to detect an issue related to the user query and the context"
+        - "Step 4: Check if the response was able to provide fix for the problem"
+      description: "Verify if the agent is performing the troubleshooting of the scenario"
+
+    "geval:k8s_oom_root_cause_analysis":
+      description: "Verify the agent correctly identifies an OOMKill event and its specific trigger"
+      evaluation_params:
+        - query
+        - response
+        - contexts
+      criteria: |
+        The response must be evaluated based on the following OOM-specific technical points:
+        1. The agent must explicitly identify the failure as an OOMKill or provide the specific Exit Code 137.
+        2. The agent must correlate the failure with the specific memory limit of the container found in the contexts.
+        3. The response must identify the source of the memory pressure, such as the specific command or process causing the leak described in the contexts.
+        4. The agent must distinguish between a generic crash and a resource-limit-induced termination. Failure to mention memory limits or OOM status is a significant detractor.
+      evaluation_steps:
+        - "Step 1: Compare the response against the contexts. Check if the response mentions OOMKill, Out of Memory, or Exit Code 137."
+        - "Step 2: Verify if the response mentions the specific memory limit or the specific memory usage rate provided in the contexts."
+        - "Step 3: Check if the agent correctly identified the root cause (e.g., a memory leak in the script) as defined in the contexts."
+        - "Step 4: Confirm that the agent provided a concrete fix rather than generic troubleshooting steps."
+
+  # Conversation-level metrics metadata
+  conversation_level:
+    "deepeval:conversation_completeness":
+      default: true
+
+    "deepeval:conversation_relevancy":
+      default: true
+
+    "deepeval:knowledge_retention":
+      default: false
+
+
+# Output Configuration
+output:
+  output_dir: "./results"
+  base_filename: "evaluation"
+  enabled_outputs:          # Enable specific output types
+    - csv                   # Detailed results CSV
+
+  # CSV columns to include
+  csv_columns:
+    - "conversation_group_id"
+    - "turn_id"
+    - "metric_identifier"
+    - "score"
+    - "result"
+    - "reason"
+    - "query"
+    - "response"
+    - "execution_time"
+
+# Visualization settings
+visualization:
+  figsize: [12, 8]            # Graph size (width, height)
+  dpi: 300                    # Image resolution
+
+  # Graph types to generate
+  enabled_graphs:
+    # - "pass_rates"            # Pass rate bar chart
+    - "score_distribution"    # Score distribution box plot
+    # - "conversation_heatmap"  # Heatmap of conversation performance
+    - "status_breakdown"      # Pie chart for pass/fail/error breakdown
+
+# Environment Variables - Automatically get set before any imports
+environment:
+  DEEPEVAL_TELEMETRY_OPT_OUT: "YES"        # Disable DeepEval telemetry
+  DEEPEVAL_DISABLE_PROGRESS_BAR: "YES"     # Disable DeepEval progress bars
+
+  LITELLM_LOG: ERROR                       # Suppress LiteLLM verbose logging
+
+# Logging Configuration
+logging:
+  # Source code logging level
+  source_level: INFO          # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+  # Package logging level (imported libraries)
+  package_level: ERROR
+
+  # Log format and display options
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  show_timestamps: true
+
+  # Specific package log levels (override package_level for specific libraries)
+  package_overrides:
+    httpx: ERROR
+    urllib3: ERROR
+    requests: ERROR
+    matplotlib: ERROR
+    LiteLLM: WARNING
+    DeepEval: WARNING
+    ragas: WARNING

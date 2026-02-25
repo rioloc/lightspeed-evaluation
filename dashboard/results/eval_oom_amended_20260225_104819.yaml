@@ -1,0 +1,99 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: "`KubePodCrashLooping` is coming from pod **`awesome-application-7c5f7df47f-qhj9r`**\
+      \ in **`openshift-lightspeed`**.\n\n### What’s happening (root cause)\n- The\
+      \ container runs a Python loop that **allocates ~1MiB every second forever**\
+      \ (intentional memory leak).\n- Pod has **memory request/limit = 60Mi**.\n-\
+      \ Result: the container quickly exceeds 60Mi and gets **killed (OOMKilled)**,\
+      \ then restarts → **CrashLoopBackOff**.\n- Events confirm repeated back-off\
+      \ restarting the failed container.\n\nEvidence from the pod spec (container\
+      \ command):\n- `data.append(\"x\" * 1000000)` in an infinite `while True` loop\n\
+      - memory `limits: 60Mi`\n\n### Fix options\n1. **Fix the app**: remove/stop\
+      \ the unbounded allocation (preferred).\n2. **Raise memory limit** (band-aid;\
+      \ it will still grow unbounded and eventually OOM):\n   - e.g., set `resources.limits.memory`\
+      \ much higher, or add logic to cap memory usage.\n3. **Add proper health/behavior\
+      \ controls**:\n   - If this is a test workload, consider setting it to exit\
+      \ cleanly after N allocations.\n\n### Quick triage commands (you run)\n```bash\n\
+      oc -n openshift-lightspeed get pod awesome-application-7c5f7df47f-qhj9r -o wide\n\
+      oc -n openshift-lightspeed describe pod awesome-application-7c5f7df47f-qhj9r\
+      \ | egrep -i 'OOMKilled|Exit Code|Last State|Reason'\n```\n\nIf you tell me\
+      \ whether this “awesome-application” is meant to be a demo/leak-test or a real\
+      \ app, I’ll propose the exact Deployment patch (memory change vs. code/command\
+      \ change)."
+    tool_calls:
+    - - tool_name: namespaces_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    - - tool_name: pods_list
+        arguments:
+          labelSelector: app=awesome-application
+    - - tool_name: pods_list_in_namespace
+        arguments:
+          namespace: openshift-lightspeed
+    - - tool_name: events_list
+        arguments:
+          namespace: openshift-lightspeed
+    - - tool_name: pods_get
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-qhj9r
+    - - tool_name: pods_log
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-qhj9r
+          tail: 200
+    - - tool_name: pods_log
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-qhj9r
+          previous: true
+          tail: 200
+    - - tool_name: pods_exec
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-2hkqm
+          command:
+          - sh
+          - -c
+          - python3 -c 'import time; print("hi"); time.sleep(5)'
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 8e9f45c6-21d8-4ee9-92c8-a05f59c4f90b
+    api_input_tokens: 103795
+    api_output_tokens: 408
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

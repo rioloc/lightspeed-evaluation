@@ -1,0 +1,42 @@
+conversation_group_id,turn_id,metric_identifier,score,result,reason,query,response,execution_time
+OOM,Investigate OOM,custom:answer_correctness,0.1,FAIL,"Custom answer correctness: 0.10 - The expected root cause is specific and clear: the `awesome-application` deployment’s Python process intentionally leaks memory (~1MB/sec), hits a 60Mi memory limit, and the container is OOMKilled, leading to CrashLooping. The provided response does not identify this root cause, does not mention OOMKills, memory limits, or the leaking command, and instead claims it cannot see any CrashLoopBackOff and asks for more information. While it doesn’t directly contradict the expected root cause (it admits the pod list is truncated and may be missing), it fails to provide the required diagnosis and is therefore largely incorrect/incomplete relative to the expected response.",Investigate the KubePodCrashLooping,"I don’t currently see any Pods in **CrashLoopBackOff** from the data returned. The pod list output is truncated, though, so the crashing pod(s) may be outside what we can see.
+
+### What I can confirm from Events
+- No `KubePodCrashLooping`-type warnings were present in the events returned.
+- The only notable warnings shown are **FailedScheduling** for some `openshift-controller-manager` pods due to node affinity/anti-affinity constraints (not a crash loop). Those pods then scheduled and started.
+
+### Next step (need one of these from you)
+Tell me **which namespace/pod** is reporting `KubePodCrashLooping` (from Alertmanager, Console, or Prometheus), or paste the alert’s labels. With just the pod name + namespace I can pull:
+- `describe`-equivalent details (container last termination reason/exit code)
+- current logs and `--previous` logs
+- related events in that namespace
+
+If you already know the pod, reply with: `namespace=<ns> pod=<name>` and I’ll continue.",3.370
+OOM,Investigate OOM,geval:generic_troubleshooting_experience,0.2,FAIL,"The response is mostly generic and not grounded in the provided context/evidence about the actual crash: it claims no CrashLoopBackOff is visible and asks for more details, instead of identifying the known issue that the awesome-application is CrashLoopBackOff due to OOMKill from a memory leak. It provides some analysis of events (FailedScheduling for openshift-controller-manager), but it fails to detect the relevant OOM-related CrashLooping and does not propose a concrete fix (e.g., addressing the memory leak or adjusting memory limits/requests). It also violates the context preference by suggesting the user provide info to run further diagnostics rather than pointing out the issue and solution.",Investigate the KubePodCrashLooping,"I don’t currently see any Pods in **CrashLoopBackOff** from the data returned. The pod list output is truncated, though, so the crashing pod(s) may be outside what we can see.
+
+### What I can confirm from Events
+- No `KubePodCrashLooping`-type warnings were present in the events returned.
+- The only notable warnings shown are **FailedScheduling** for some `openshift-controller-manager` pods due to node affinity/anti-affinity constraints (not a crash loop). Those pods then scheduled and started.
+
+### Next step (need one of these from you)
+Tell me **which namespace/pod** is reporting `KubePodCrashLooping` (from Alertmanager, Console, or Prometheus), or paste the alert’s labels. With just the pod name + namespace I can pull:
+- `describe`-equivalent details (container last termination reason/exit code)
+- current logs and `--previous` logs
+- related events in that namespace
+
+If you already know the pod, reply with: `namespace=<ns> pod=<name>` and I’ll continue.",3.373
+OOM,Investigate OOM,geval:k8s_oom_root_cause_analysis,0.1,FAIL,"The response does not mention OOMKill, Out of Memory, or exit code 137, nor does it reference any memory limit/usage. It also fails to identify the root cause described in context (memory leak in the deployment command) and provides no concrete fix; instead it claims no CrashLoopBackOff is visible and asks the user for more details, which conflicts with the provided context.",Investigate the KubePodCrashLooping,"I don’t currently see any Pods in **CrashLoopBackOff** from the data returned. The pod list output is truncated, though, so the crashing pod(s) may be outside what we can see.
+
+### What I can confirm from Events
+- No `KubePodCrashLooping`-type warnings were present in the events returned.
+- The only notable warnings shown are **FailedScheduling** for some `openshift-controller-manager` pods due to node affinity/anti-affinity constraints (not a crash loop). Those pods then scheduled and started.
+
+### Next step (need one of these from you)
+Tell me **which namespace/pod** is reporting `KubePodCrashLooping` (from Alertmanager, Console, or Prometheus), or paste the alert’s labels. With just the pod name + namespace I can pull:
+- `describe`-equivalent details (container last termination reason/exit code)
+- current logs and `--previous` logs
+- related events in that namespace
+
+If you already know the pod, reply with: `namespace=<ns> pod=<name>` and I’ll continue.",2.071
+OOM,,deepeval:conversation_completeness,0.0,FAIL,"The score is 0.0 because the User wanted help to ""investigate/troubleshoot a KubePodCrashLooping alert,"" but the LLM response did not perform an investigation or provide actionable, pod-specific troubleshooting. It instead stated it ""don’t currently see any Pods in CrashLoopBackOff"" and only asked the User for more details: ""Tell me which namespace/pod is reporting KubePodCrashLooping... or paste the alert’s labels,"" which does not meaningfully advance diagnosis or resolution of the crash-looping pod.",,,7.859
+OOM,,deepeval:conversation_relevancy,1.0,PASS,"The score is 1.0 because there are no listed irrelevancies ([]), meaning no 'assistant' message (or any specific information within one) is quoted as being off-topic or unrelated to the 'user' message.",,,2.869

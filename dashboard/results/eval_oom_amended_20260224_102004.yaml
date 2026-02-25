@@ -1,0 +1,126 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: 'Pod YAML truncated; need describe.
+
+      No pods_describe tool; use pods_get with jsonpath? not available. Ask user for
+      more details.
+
+      I found the **CrashLooping** pod:
+
+
+      - **Namespace:** `openshift-lightspeed`
+
+      - **Pod:** `awesome-application-7c5f7df47f-2hkqm`
+
+      - **State:** `0/1` and **CrashLooping/Crash** (container `app`)
+
+      - **Logs:** both current and `--previous` show **no output** (“has not logged
+      any message yet”)
+
+      - **Events:** show the container was created, but the event stream returned
+      by the tool is **truncated**, so the *actual failure reason* (e.g., `BackOff`,
+      `Error`, `OOMKilled`, image pull issues, probe failures, etc.) isn’t visible
+      from what I can access right now.
+
+
+      ### What I need to finish the investigation
+
+      Please provide the outputs of the following (these will reveal the exact crash
+      reason/exit code and any probe/config errors):
+
+
+      ```bash
+
+      oc -n openshift-lightspeed describe pod awesome-application-7c5f7df47f-2hkqm
+
+      oc -n openshift-lightspeed get pod awesome-application-7c5f7df47f-2hkqm -o yaml
+
+      oc -n openshift-lightspeed logs awesome-application-7c5f7df47f-2hkqm -c app
+      --previous --tail=200
+
+      ```
+
+
+      ### Quick likely causes when logs are empty
+
+      If the container exits before writing logs, common causes are:
+
+      - **Bad command/entrypoint** (`CrashLoopBackOff`, exit code often `127`/`126`/`1`)
+
+      - **Missing required env/secret/configmap** (app exits immediately)
+
+      - **Permission/SCC issues** (fails before app starts)
+
+      - **OOMKilled** (exit `137`, would show in `describe` under `Last State`)
+
+
+      Paste the `describe pod` output (especially **“Last State”**, **Exit Code/Reason**,
+      and **Events**) and I’ll pinpoint root cause + exact fix.'
+    tool_calls:
+    - - tool_name: projects_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running,metadata.namespace=openshift-lightspeed
+    - - tool_name: pods_get
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-2hkqm
+    - - tool_name: pods_log
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-2hkqm
+          tail: 200
+    - - tool_name: pods_log
+        arguments:
+          namespace: openshift-lightspeed
+          name: awesome-application-7c5f7df47f-2hkqm
+          previous: true
+          tail: 200
+    - - tool_name: events_list
+        arguments:
+          namespace: openshift-lightspeed
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 70d435b8-8eb2-48ff-86c2-99242122f74a
+    api_input_tokens: 106163
+    api_output_tokens: 456
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

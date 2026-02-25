@@ -1,0 +1,42 @@
+conversation_group_id,turn_id,metric_identifier,score,result,reason,query,response,execution_time
+OOM,Investigate OOM,custom:answer_correctness,0.05,FAIL,"Custom answer correctness: 0.05 - The expected root cause is specific: the `awesome-application` deployment’s container is being OOMKilled because it runs a Python process that leaks ~1MB/sec with a 60Mi memory limit, leading to CrashLoopBackOff and triggering KubePodCrashLooping. The provided response does not identify this at all; instead it claims there are no CrashLoopBackOff pods and discusses unrelated readiness probe failures (`kube-apiserver-guard`) and installer pods. That directly conflicts with the expected scenario and fails to provide the required diagnosis (OOMKill due to memory leak / insufficient limit). While the suggested troubleshooting commands are generally reasonable, they do not align with the expected answer and the response is incomplete for the requested investigation.",Investigate the KubePodCrashLooping,"I don’t currently see any pods in **CrashLoopBackOff**, so there’s no active **KubePodCrashLooping** condition to investigate from the data returned.
+
+What I *do* see:
+- A **kube-apiserver-guard** readiness probe transiently failing with **HTTP 500** (`Reason=ProbeError/Unhealthy`) during a kube-apiserver revision rollout. This is typically **not** CrashLooping; it’s a readiness failure while the apiserver is coming up.
+- At least one **installer** pod in `openshift-kube-controller-manager` shows as not running (output truncated), which is usually normal for revision installers (they complete/exit).
+
+To pinpoint the KubePodCrashLooping alert, tell me **which namespace/pod** it reports. Or run/provide:
+- `oc get pod -A | egrep -i 'CrashLoopBackOff|Error'`
+
+If you paste the flagged pod name/namespace, I’ll pull:
+- `oc describe pod ...`
+- `oc logs ... --previous`
+- related events for that pod, and give the root cause + fix.",4.381
+OOM,Investigate OOM,geval:generic_troubleshooting_experience,0.2,FAIL,"The response does not align with the provided cluster context stating the awesome-application is CrashLoopBackOff due to an OOM kill from a memory leak. Instead, it claims no CrashLoopBackOff pods are present and focuses on unrelated readiness probe issues. It also asks the user to run commands and provide more data, which directly violates the constraint to avoid suggesting commands. As a result, it neither correctly identifies the CrashLooping issue nor provides a concrete fix for the OOM/memory leak problem.",Investigate the KubePodCrashLooping,"I don’t currently see any pods in **CrashLoopBackOff**, so there’s no active **KubePodCrashLooping** condition to investigate from the data returned.
+
+What I *do* see:
+- A **kube-apiserver-guard** readiness probe transiently failing with **HTTP 500** (`Reason=ProbeError/Unhealthy`) during a kube-apiserver revision rollout. This is typically **not** CrashLooping; it’s a readiness failure while the apiserver is coming up.
+- At least one **installer** pod in `openshift-kube-controller-manager` shows as not running (output truncated), which is usually normal for revision installers (they complete/exit).
+
+To pinpoint the KubePodCrashLooping alert, tell me **which namespace/pod** it reports. Or run/provide:
+- `oc get pod -A | egrep -i 'CrashLoopBackOff|Error'`
+
+If you paste the flagged pod name/namespace, I’ll pull:
+- `oc describe pod ...`
+- `oc logs ... --previous`
+- related events for that pod, and give the root cause + fix.",2.832
+OOM,Investigate OOM,geval:k8s_oom_root_cause_analysis,0.1,FAIL,"The response does not mention OOMKill/Out of Memory/exit code 137 and instead claims there is no CrashLoopBackOff to investigate, which conflicts with the context stating the awesome-application is CrashLoopBackOff due to an OOM kill from a memory leak. It also provides no specific memory limit/usage details and does not identify the memory leak as the root cause. Finally, it gives generic troubleshooting steps and suggests commands to run, which the context explicitly says to avoid, rather than offering a concrete fix.",Investigate the KubePodCrashLooping,"I don’t currently see any pods in **CrashLoopBackOff**, so there’s no active **KubePodCrashLooping** condition to investigate from the data returned.
+
+What I *do* see:
+- A **kube-apiserver-guard** readiness probe transiently failing with **HTTP 500** (`Reason=ProbeError/Unhealthy`) during a kube-apiserver revision rollout. This is typically **not** CrashLooping; it’s a readiness failure while the apiserver is coming up.
+- At least one **installer** pod in `openshift-kube-controller-manager` shows as not running (output truncated), which is usually normal for revision installers (they complete/exit).
+
+To pinpoint the KubePodCrashLooping alert, tell me **which namespace/pod** it reports. Or run/provide:
+- `oc get pod -A | egrep -i 'CrashLoopBackOff|Error'`
+
+If you paste the flagged pod name/namespace, I’ll pull:
+- `oc describe pod ...`
+- `oc logs ... --previous`
+- related events for that pod, and give the root cause + fix.",2.490
+OOM,,deepeval:conversation_completeness,0.0,FAIL,"The score is 0.0 because the user wanted the assistant to investigate and diagnose a KubePodCrashLooping alert, but the LLM response did not identify any crashing pod or determine a root cause, instead saying ""I don’t currently see any pods in CrashLoopBackOff"" and only offering generic observations like readiness probe failures while deferring the investigation by asking the user to run commands and share details such as ""tell me which namespace/pod it reports"" and ""`oc get pod -A | egrep ...`"".",,,7.138
+OOM,,deepeval:conversation_relevancy,1.0,PASS,"The score is 1.0 because there are no listed irrelevancies (""Irrelevancies: []""), meaning no assistant message is quoted as off-topic and no specific irrelevant information is identified.",,,2.661

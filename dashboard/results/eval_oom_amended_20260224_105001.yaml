@@ -1,0 +1,76 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: 'I don’t currently see any Pods in **CrashLoopBackOff** from the data
+      returned. The pod list output is truncated, though, so the crashing pod(s) may
+      be outside what we can see.
+
+
+      ### What I can confirm from Events
+
+      - No `KubePodCrashLooping`-type warnings were present in the events returned.
+
+      - The only notable warnings shown are **FailedScheduling** for some `openshift-controller-manager`
+      pods due to node affinity/anti-affinity constraints (not a crash loop). Those
+      pods then scheduled and started.
+
+
+      ### Next step (need one of these from you)
+
+      Tell me **which namespace/pod** is reporting `KubePodCrashLooping` (from Alertmanager,
+      Console, or Prometheus), or paste the alert’s labels. With just the pod name
+      + namespace I can pull:
+
+      - `describe`-equivalent details (container last termination reason/exit code)
+
+      - current logs and `--previous` logs
+
+      - related events in that namespace
+
+
+      If you already know the pod, reply with: `namespace=<ns> pod=<name>` and I’ll
+      continue.'
+    tool_calls:
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: events_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 7d40b1e1-0b88-49db-8cba-22b774a886f4
+    api_input_tokens: 42302
+    api_output_tokens: 232
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null

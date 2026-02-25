@@ -1,0 +1,65 @@
+- conversation_group_id: OOM
+  description: null
+  tag: eval
+  conversation_metrics: null
+  conversation_metrics_metadata: null
+  turns:
+  - time_to_first_token: null
+    streaming_duration: null
+    tokens_per_second: null
+    turn_id: Investigate OOM
+    query: Investigate the KubePodCrashLooping
+    attachments: null
+    response: "No pods are currently in **CrashLoopBackOff** (the usual symptom behind\
+      \ the *KubePodCrashLooping* alert) in the data I can see.\n\nWhat I *do* see:\n\
+      \n- **Failed pods (not CrashLooping)** in `openshift-kube-controller-manager`:\n\
+      \  - `installer-4-ip-10-0-14-159...` **Status: Error**\n  - `installer-4-retry-1-ip-10-0-14-159...`\
+      \ **Status: Error**\n  These are static-pod “installer” jobs from an older revision;\
+      \ they can remain in Error after retries and often don’t indicate an active\
+      \ outage by themselves.\n\n- **Warnings** for `openshift-kube-apiserver` guard\
+      \ pods:\n  - `kube-apiserver-guard-...` readiness probe returned **HTTP 500**\
+      \ at one point, but later events show kube-apiserver successfully moved to **revision\
+      \ 9** on all masters, suggesting this was transient during rollout.\n\nTo investigate\
+      \ the *actual* **KubePodCrashLooping** alert source, I need the specific pod(s)\
+      \ firing it. Please provide one of:\n- The **alert details** (namespace/pod/container),\
+      \ or\n- Output of: `oc get pods -A | egrep -i 'crashloop|error|backoff'`\n\n\
+      If you share the namespace/pod name, I’ll pull `describe` + previous container\
+      \ logs and identify the exact crash reason and fix."
+    tool_calls:
+    - - tool_name: pods_list
+        arguments: {}
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Running
+    - - tool_name: pods_list
+        arguments:
+          fieldSelector: status.phase=Failed
+    - - tool_name: events_list
+        arguments: {}
+    contexts:
+    - The awesome-application is in CrashLoopBackOff due to OOM kill
+    - The awesome-application is in out of memory due a memory leakage in the deployment
+      command
+    - The responses should not include hints or suggestions to the user on what command
+      to run and how. The preferred response, the ones that should get a better score,
+      are the ones which points out an issue, and possibly also a solution to address
+      that
+    expected_keywords: null
+    expected_response: "Root cause: the app container is being OOMKilled due to a\
+      \ deliberate memory leak in the pod command, while the container has a 60Mi\
+      \ memory limit. \nDeployment awesome-application runs Python that appends ~1MB/sec\
+      \ forever.\n"
+    expected_tool_calls: null
+    expected_intent: null
+    conversation_id: 21e7a452-6e06-411c-958d-321053686359
+    api_input_tokens: 68360
+    api_output_tokens: 314
+    turn_metrics:
+    - custom:answer_correctness
+    - geval:generic_troubleshooting_experience
+    - geval:k8s_oom_root_cause_analysis
+    turn_metrics_metadata: null
+    verify_script: null
+  setup_script: null
+  cleanup_script: null
+  skip_on_failure: null
