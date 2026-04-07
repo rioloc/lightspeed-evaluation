@@ -107,6 +107,27 @@ class TestAPIRequest:
             == "file1"
         )
 
+    def test_create_request_with_mode(self) -> None:
+        """Test creating request with mode parameter."""
+        request = APIRequest.create(query="Test query", mode="ask")
+
+        assert request.mode == "ask"
+
+    def test_create_request_without_mode(self) -> None:
+        """Test that mode is excluded from serialization when None."""
+        request = APIRequest.create(query="Test query")
+
+        assert request.mode is None
+        dumped = request.model_dump(exclude_none=True)
+        assert "mode" not in dumped
+
+    def test_create_request_mode_in_serialization(self) -> None:
+        """Test that mode is included in serialization when set."""
+        request = APIRequest.create(query="Test query", mode="troubleshooting")
+
+        dumped = request.model_dump(exclude_none=True)
+        assert dumped["mode"] == "troubleshooting"
+
     def test_request_empty_query_validation(self) -> None:
         """Test that empty query fails validation."""
         with pytest.raises(ValidationError):

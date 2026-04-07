@@ -6,7 +6,10 @@ from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from lightspeed_evaluation.core.constants import SUPPORTED_RESULT_STATUSES
+from lightspeed_evaluation.core.constants import (
+    SUPPORTED_MODES,
+    SUPPORTED_RESULT_STATUSES,
+)
 from lightspeed_evaluation.core.models.mixins import StreamingMetricsMixin
 
 logger = logging.getLogger(__name__)
@@ -42,6 +45,9 @@ class TurnData(StreamingMetricsMixin):
     query: str = Field(..., min_length=1, description="Query")
     attachments: Optional[list[str]] = Field(
         default=None, min_length=0, description="Attachments"
+    )
+    mode: Optional[str] = Field(
+        default=None, description="Mode override for this turn (ask or troubleshooting)"
     )
     response: Optional[str] = Field(
         default=None,
@@ -105,6 +111,14 @@ class TurnData(StreamingMetricsMixin):
     def is_metric_invalid(self, metric: str) -> bool:
         """Returns True if the metric didn't pass the validation."""
         return metric in self._invalid_metrics
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: Optional[str]) -> Optional[str]:
+        """Validate mode is supported if provided."""
+        if v is not None and v not in SUPPORTED_MODES:
+            raise ValueError(f"Mode must be one of {SUPPORTED_MODES}")
+        return v
 
     @field_validator("turn_metrics")
     @classmethod

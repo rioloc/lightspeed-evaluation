@@ -58,6 +58,7 @@ DEFAULT_API_TIMEOUT = 300
 DEFAULT_ENDPOINT_TYPE = "streaming"
 SUPPORTED_ENDPOINT_TYPES = ["streaming", "query"]
 DEFAULT_API_CACHE_DIR = ".caches/api_cache"
+SUPPORTED_MODES = ["ask", "troubleshooting"]
 
 DEFAULT_API_NUM_RETRIES = 3
 
