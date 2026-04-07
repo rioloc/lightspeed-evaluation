@@ -42,6 +42,7 @@ from lightspeed_evaluation.core.constants import (
     SUPPORTED_CSV_COLUMNS,
     SUPPORTED_ENDPOINT_TYPES,
     SUPPORTED_GRAPH_TYPES,
+    SUPPORTED_MODES,
     SUPPORTED_OUTPUT_TYPES,
 )
 from lightspeed_evaluation.core.system.exceptions import ConfigurationError
@@ -288,6 +289,7 @@ class APIConfig(BaseModel):
     system_prompt: Optional[str] = Field(
         default=None, description="System prompt for API calls"
     )
+    mode: Optional[str] = Field(default=None, description="API mode (ask/troubleshooting)")
     cache_dir: str = Field(
         default=DEFAULT_API_CACHE_DIR,
         min_length=1,
@@ -314,6 +316,14 @@ class APIConfig(BaseModel):
         """Validate endpoint type is supported."""
         if v not in SUPPORTED_ENDPOINT_TYPES:
             raise ValueError(f"Endpoint type must be one of {SUPPORTED_ENDPOINT_TYPES}")
+        return v
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: Optional[str]) -> Optional[str]:
+        """Validate mode is supported if provided."""
+        if v is not None and v not in SUPPORTED_MODES:
+            raise ValueError(f"Mode must be one of {SUPPORTED_MODES}")
         return v
 
 

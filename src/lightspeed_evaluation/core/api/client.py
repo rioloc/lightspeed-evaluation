@@ -159,6 +159,7 @@ class APIClient:
         query: str,
         conversation_id: Optional[str] = None,
         attachments: Optional[list[str]] = None,
+        mode: Optional[str] = None,
     ) -> APIResponse:
         """Query the API using the configured endpoint type.
 
@@ -166,6 +167,7 @@ class APIClient:
             query: The question/query to ask
             conversation_id: Optional conversation ID for context
             attachments: Optional list of attachments
+            mode: Optional mode override (ask or troubleshooting)
 
         Returns:
             APIResponse with Response, Tool calls, Conversation ID
@@ -174,7 +176,9 @@ class APIClient:
             raise APIError("API client not initialized")
 
         try:
-            api_request = self._prepare_request(query, conversation_id, attachments)
+            api_request = self._prepare_request(
+                query, conversation_id, attachments, mode
+            )
             if self.config.cache_enabled:
                 cached_response = self._get_cached_response(api_request)
                 if cached_response is not None:
@@ -201,8 +205,11 @@ class APIClient:
         query: str,
         conversation_id: Optional[str] = None,
         attachments: Optional[list[str]] = None,
+        mode: Optional[str] = None,
     ) -> APIRequest:
         """Prepare API request with common parameters."""
+        # Per-turn mode overrides system config mode
+        resolved_mode = mode if mode is not None else self.config.mode
         return APIRequest.create(
             query=query,
             provider=self.config.provider,
@@ -211,6 +218,7 @@ class APIClient:
             conversation_id=conversation_id,
             system_prompt=self.config.system_prompt,
             attachments=attachments,
+            mode=resolved_mode,
         )
 
     def _standard_query(self, api_request: APIRequest) -> APIResponse:
@@ -357,6 +365,7 @@ class APIClient:
             "no_tools",
             "system_prompt",
             "attachments",
+            "mode",
         ]
         str_request = ",".join([str(request_dict[k]) for k in keys_to_hash])
 

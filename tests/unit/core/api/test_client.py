@@ -536,6 +536,146 @@ class TestAPIClientConfiguration:
         assert result.conversation_id == "conv_123"
 
 
+class TestModeParameter:
+    """Tests for mode parameter support in APIClient."""
+
+    def test_api_config_valid_mode_ask(self) -> None:
+        """Test APIConfig accepts mode 'ask'."""
+        config = APIConfig(
+            enabled=True,
+            api_base="http://localhost:8080",
+            endpoint_type="query",
+            timeout=30,
+            mode="ask",
+        )
+        assert config.mode == "ask"
+
+    def test_api_config_valid_mode_troubleshooting(self) -> None:
+        """Test APIConfig accepts mode 'troubleshooting'."""
+        config = APIConfig(
+            enabled=True,
+            api_base="http://localhost:8080",
+            endpoint_type="query",
+            timeout=30,
+            mode="troubleshooting",
+        )
+        assert config.mode == "troubleshooting"
+
+    def test_api_config_mode_none_default(self) -> None:
+        """Test APIConfig defaults mode to None."""
+        config = APIConfig(
+            enabled=True,
+            api_base="http://localhost:8080",
+            endpoint_type="query",
+            timeout=30,
+        )
+        assert config.mode is None
+
+    def test_api_config_invalid_mode(self) -> None:
+        """Test APIConfig rejects invalid mode value."""
+        with pytest.raises(ValidationError, match="Mode must be one of"):
+            APIConfig(
+                enabled=True,
+                api_base="http://localhost:8080",
+                endpoint_type="query",
+                timeout=30,
+                mode="invalid",
+            )
+
+    def test_prepare_request_with_turn_mode(
+        self, basic_api_config_streaming_endpoint: APIConfig, mocker: MockerFixture
+    ) -> None:
+        """Test request preparation with per-turn mode override."""
+        mocker.patch("lightspeed_evaluation.core.api.client.httpx.Client")
+
+        client = APIClient(basic_api_config_streaming_endpoint)
+        request = client._prepare_request("Test query", mode="troubleshooting")
+
+        assert request.mode == "troubleshooting"
+
+    def test_prepare_request_mode_falls_back_to_config(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Test that mode falls back to system config when not provided per-turn."""
+        config = APIConfig(
+            enabled=True,
+            api_base="http://localhost:8080",
+            endpoint_type="query",
+            timeout=30,
+            cache_enabled=False,
+            mode="ask",
+        )
+        mocker.patch("lightspeed_evaluation.core.api.client.httpx.Client")
+
+        client = APIClient(config)
+        request = client._prepare_request("Test query")
+
+        assert request.mode == "ask"
+
+    def test_prepare_request_turn_mode_overrides_config(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Test that per-turn mode overrides system config mode."""
+        config = APIConfig(
+            enabled=True,
+            api_base="http://localhost:8080",
+            endpoint_type="query",
+            timeout=30,
+            cache_enabled=False,
+            mode="ask",
+        )
+        mocker.patch("lightspeed_evaluation.core.api.client.httpx.Client")
+
+        client = APIClient(config)
+        request = client._prepare_request("Test query", mode="troubleshooting")
+
+        assert request.mode == "troubleshooting"
+
+    def test_cache_key_differs_by_mode(
+        self, basic_api_config_streaming_endpoint: APIConfig, mocker: MockerFixture
+    ) -> None:
+        """Test that different modes produce different cache keys."""
+        mocker.patch("lightspeed_evaluation.core.api.client.httpx.Client")
+
+        client = APIClient(basic_api_config_streaming_endpoint)
+        request_ask = client._prepare_request("Test query", mode="ask")
+        request_troubleshooting = client._prepare_request(
+            "Test query", mode="troubleshooting"
+        )
+
+        key_ask = client._get_cache_key(request_ask)
+        key_troubleshooting = client._get_cache_key(request_troubleshooting)
+
+        assert key_ask != key_troubleshooting
+
+    def test_query_passes_mode_to_request(
+        self, basic_api_config_query_endpoint: APIConfig, mocker: MockerFixture
+    ) -> None:
+        """Test that query() forwards mode to the API request payload."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "response": "Test response",
+            "conversation_id": "conv_123",
+        }
+
+        mock_client = mocker.Mock()
+        mock_client.post.return_value = mock_response
+        mock_client.headers = {}
+
+        mocker.patch(
+            "lightspeed_evaluation.core.api.client.httpx.Client",
+            return_value=mock_client,
+        )
+
+        client = APIClient(basic_api_config_query_endpoint)
+        client.query("Test query", mode="ask")
+
+        call_kwargs = mock_client.post.call_args
+        request_data = call_kwargs[1]["json"]
+        assert request_data["mode"] == "ask"
+
+
 class TestRetryLogic:
     """Unit tests for retry logic in APIClient."""
 

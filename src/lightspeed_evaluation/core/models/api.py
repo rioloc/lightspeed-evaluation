@@ -47,6 +47,9 @@ class APIRequest(BaseModel):
     attachments: Optional[list[AttachmentData]] = Field(
         default=None, description="File attachments"
     )
+    mode: Optional[str] = Field(
+        default=None, description="Query mode (ask or troubleshooting)"
+    )
 
     @classmethod
     def create(
@@ -62,6 +65,7 @@ class APIRequest(BaseModel):
         conversation_id = kwargs.get("conversation_id")
         system_prompt = kwargs.get("system_prompt")
         attachments = kwargs.get("attachments")
+        mode = kwargs.get("mode")
         attachment_data = None
         if attachments:
             attachment_data = [
@@ -76,6 +80,7 @@ class APIRequest(BaseModel):
             conversation_id=conversation_id,
             system_prompt=system_prompt,
             attachments=attachment_data,
+            mode=mode,
         )
 
 

@@ -44,6 +44,30 @@ class TestTurnData:
         assert turn.turn_metrics_metadata == {"geval:custom": {"threshold": 0.8}}
 
 
+class TestTurnDataMode:
+    """Test cases for TurnData mode field validation."""
+
+    def test_valid_mode_ask(self) -> None:
+        """Test TurnData accepts mode 'ask'."""
+        turn = TurnData(turn_id="turn1", query="Q", mode="ask")
+        assert turn.mode == "ask"
+
+    def test_valid_mode_troubleshooting(self) -> None:
+        """Test TurnData accepts mode 'troubleshooting'."""
+        turn = TurnData(turn_id="turn1", query="Q", mode="troubleshooting")
+        assert turn.mode == "troubleshooting"
+
+    def test_mode_none_default(self) -> None:
+        """Test TurnData defaults mode to None."""
+        turn = TurnData(turn_id="turn1", query="Q")
+        assert turn.mode is None
+
+    def test_invalid_mode_rejected(self) -> None:
+        """Test TurnData rejects invalid mode value."""
+        with pytest.raises(ValidationError, match="Mode must be one of"):
+            TurnData(turn_id="turn1", query="Q", mode="invalid")
+
+
 class TestTurnDataToolCallsValidation:
     """Test cases for TurnData expected_tool_calls field validation and conversion."""
 
