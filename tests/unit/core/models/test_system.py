@@ -30,7 +30,15 @@ from lightspeed_evaluation.core.models.system import (
     LoggingConfig,
     QualityScoreConfig,
 )
+<<<<<<< HEAD
 from lightspeed_evaluation.core.storage import FileBackendConfig
+=======
+from lightspeed_evaluation.core.models.agents import (
+    AgentDefaultConfig,
+    AgentsConfig,
+    HttpApiAgentConfig,
+)
+>>>>>>> 974ba94 (feat: add agents configuration layer with backward-compatible api: migration)
 from lightspeed_evaluation.core.system.exceptions import ConfigurationError
 
 
