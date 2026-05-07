@@ -603,7 +603,6 @@ quality_score:
         finally:
             Path(temp_path).unlink()
 
-
 class TestConfigLoaderAgents:
     """Tests for agents configuration loading."""
 
