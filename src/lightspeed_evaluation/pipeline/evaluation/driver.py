@@ -25,6 +25,9 @@ from lightspeed_evaluation.core.models import (
 from lightspeed_evaluation.core.system.exceptions import ConfigurationError
 from lightspeed_evaluation.pipeline.evaluation.amender import APIDataAmender
 from lightspeed_evaluation.pipeline.evaluation.cli import KubeCLI
+from lightspeed_evaluation.pipeline.evaluation.proposal_amender import (
+    ProposalAmender,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +143,7 @@ class ProposalDriver(AgentDriver):
         super().__init__(config, enabled=enabled)
         self._cli = self._resolve_cli()
         self._kube_cli = KubeCLI(cli_path=self._cli, namespace=self._config.namespace)
+        self._amender = ProposalAmender(self._kube_cli)
 
     def validate_config(self, config: dict[str, Any]) -> ProposalAgentConfig:
         """Validate proposal driver configuration."""
@@ -205,8 +209,13 @@ class ProposalDriver(AgentDriver):
                 None,
             )
 
-        turn_data.response = self._extract_summary(status_dict)
-        turn_data.proposal_status = status_dict
+        amend_err = self._amender.amend(turn_data, status_dict)
+        if amend_err:
+            logger.warning("ProposalAmender failed: %s", amend_err)
+            if not turn_data.response:
+                turn_data.response = self._extract_summary(status_dict)
+            if not turn_data.proposal_status:
+                turn_data.proposal_status = status_dict
         self._cleanup(cr_name)
 
         if outcome == TerminalOutcome.COMPLETED:

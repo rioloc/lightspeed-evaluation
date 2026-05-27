@@ -476,7 +476,9 @@ class TestExecuteTurn:
 
         assert error is None
         assert conv_id is None
-        assert turn.response == "Analysis done; Passed"
+        response = str(turn.response)
+        assert "Analysis done" in response
+        assert "Passed" in response
         assert turn.proposal_status == terminal_status
         driver._cleanup.assert_called_once_with("eval-abcd1234")
 
@@ -586,7 +588,8 @@ class TestExecuteTurn:
         assert error is not None
         assert "Failed" in error
         assert turn.proposal_status == status
-        assert turn.response == "LLM error"
+        response = str(turn.response)
+        assert "LLM error" in response
 
     def test_denied_terminal(
         self, mocker: MockerFixture, driver: ProposalDriver
