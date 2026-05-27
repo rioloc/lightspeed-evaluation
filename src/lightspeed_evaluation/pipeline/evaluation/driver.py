@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import os
 import re
 import shutil
 import subprocess
@@ -15,17 +13,18 @@ from enum import StrEnum
 from typing import Any, Optional, cast
 
 from lightspeed_evaluation.core.api import APIClient
+from lightspeed_evaluation.core.metrics.custom.proposal_eval import (
+    _derive_phase,
+)
 from lightspeed_evaluation.core.models import (
     APIConfig,
     HttpApiAgentConfig,
     ProposalAgentConfig,
     TurnData,
 )
-from lightspeed_evaluation.core.metrics.custom.proposal_eval import (
-    _derive_phase,
-)
 from lightspeed_evaluation.core.system.exceptions import ConfigurationError
 from lightspeed_evaluation.pipeline.evaluation.amender import APIDataAmender
+from lightspeed_evaluation.pipeline.evaluation.cli import KubeCLI
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +139,7 @@ class ProposalDriver(AgentDriver):
         """Initialize the proposal driver."""
         super().__init__(config, enabled=enabled)
         self._cli = self._resolve_cli()
+        self._kube_cli = KubeCLI(cli_path=self._cli, namespace=self._config.namespace)
 
     def validate_config(self, config: dict[str, Any]) -> ProposalAgentConfig:
         """Validate proposal driver configuration."""
@@ -221,59 +221,20 @@ class ProposalDriver(AgentDriver):
         """Resolve oc or kubectl binary path."""
         return shutil.which("oc") or shutil.which("kubectl") or ""
 
-    def _run_cli(
-        self,
-        args: list[str],
-        stdin: Optional[str] = None,
-    ) -> subprocess.CompletedProcess[str]:
-        """Run a CLI command and return the result."""
-        return subprocess.run(
-            [self._cli, *args],
-            input=stdin,
-            text=True,
-            capture_output=True,
-            env=os.environ.copy(),
-            timeout=self._config.cli_timeout,
-            check=False,
-        )
-
     def _apply(self, manifest: dict[str, Any]) -> subprocess.CompletedProcess[str]:
         """Apply a CR manifest via stdin."""
-        return self._run_cli(["apply", "-f", "-"], stdin=json.dumps(manifest))
+        return self._kube_cli.apply(manifest)
 
     def _get_status(self, cr_name: str) -> tuple[dict[str, Any], Optional[str]]:
         """Get Proposal CR status."""
-        result = self._run_cli(
-            [
-                "get",
-                CRD_PLURAL,
-                cr_name,
-                "-n",
-                self._config.namespace,
-                "-o",
-                "json",
-            ]
-        )
-        if result.returncode != 0:
-            return {}, f"Failed to get status for '{cr_name}': {result.stderr.strip()}"
-        try:
-            cr = json.loads(result.stdout)
-        except json.JSONDecodeError as exc:
-            return {}, f"Failed to parse status JSON for '{cr_name}': {exc}"
+        cr, err = self._kube_cli.get_resource(CRD_PLURAL, cr_name)
+        if err:
+            return {}, f"Failed to get status for '{cr_name}': {err}"
         return cr.get("status", {}), None
 
     def _delete(self, cr_name: str) -> None:
         """Delete a Proposal CR."""
-        self._run_cli(
-            [
-                "delete",
-                CRD_PLURAL,
-                cr_name,
-                "-n",
-                self._config.namespace,
-                "--ignore-not-found",
-            ]
-        )
+        self._kube_cli.delete(CRD_PLURAL, cr_name)
 
     def _cleanup(self, cr_name: str) -> None:
         """Delete the Proposal CR if cleanup is enabled."""
