@@ -44,3 +44,37 @@ Rate the intent alignment and provide your reasoning. Use binary scoring: 1 for 
 Format your response as:
 Score: [0 or 1]
 Reason: [your detailed explanation]"""
+
+# Proposal Evaluation Correctness Prompt
+PROPOSAL_EVALUATION_CORRECTNESS_PROMPT = """Evaluate the quality of this agentic remediation workflow.
+
+## Original Request
+{request}
+
+## Workflow Summary
+{workflow_summary}
+
+Evaluate the following aspects and provide an overall quality score:
+
+1. **Diagnosis Quality**: Is the root cause analysis accurate and well-reasoned?
+   Does it correctly identify the problem? Is the confidence level appropriate?
+2. **Option Selection**: If multiple options were proposed, was the approved option
+   (Option 0) the most appropriate choice? Were alternatives reasonable?
+3. **Action Appropriateness**: Are the proposed/executed actions appropriate for
+   the diagnosed issue? Are they safe, well-scoped, and minimal?
+4. **Risk Management**: Is the risk assessment accurate? Are rollback plans adequate?
+   Is the reversibility assessment correct?
+5. **Verification Thoroughness**: Are verification checks comprehensive and relevant?
+   Do they adequately confirm the fix?
+
+Note: Only evaluate the aspects that are present in the workflow.
+If only analysis was performed, evaluate only diagnosis quality and option planning.
+If execution was performed without verification, evaluate diagnosis and execution quality.
+The analysis may contain multiple remediation options — Option 0 is the one that was
+auto-approved and executed.
+
+Rate the overall quality and provide your reasoning.
+
+Format your response as:
+Score: [your score on a scale of 0.0 to 1.0]
+Reason: [your detailed explanation]"""

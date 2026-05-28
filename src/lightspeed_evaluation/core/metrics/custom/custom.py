@@ -8,6 +8,7 @@ from lightspeed_evaluation.core.llm.manager import LLMManager
 from lightspeed_evaluation.core.metrics.custom.prompts import (
     ANSWER_CORRECTNESS_PROMPT,
     INTENT_EVALUATION_PROMPT,
+    PROPOSAL_EVALUATION_CORRECTNESS_PROMPT,
 )
 from lightspeed_evaluation.core.metrics.custom.keywords_eval import evaluate_keywords
 from lightspeed_evaluation.core.metrics.custom.proposal_eval import (
@@ -48,6 +49,9 @@ class CustomMetrics:  # pylint: disable=too-few-public-methods
             "intent_eval": self._evaluate_intent,
             "tool_eval": self._evaluate_tool_calls,
             "proposal_status": evaluate_proposal_status,
+            "proposal_evaluation_correctness": (
+                self._evaluate_proposal_evaluation_correctness
+            ),
         }
 
         print(f"✅ Custom Metrics initialized: {self.llm.model_name}")
@@ -296,3 +300,39 @@ class CustomMetrics:  # pylint: disable=too-few-public-methods
             return score, reason
         except LLMError as e:
             return None, f"Intent evaluation failed: {str(e)}"
+
+    def _evaluate_proposal_evaluation_correctness(
+        self,
+        _conv_data: Any,
+        _turn_idx: Optional[int],
+        turn_data: Optional[TurnData],
+        is_conversation: bool,
+    ) -> tuple[Optional[float], str]:
+        """Evaluate agentic remediation workflow quality using LLM judge."""
+        if is_conversation:
+            return None, "Proposal evaluation correctness is a turn-level metric"
+
+        if turn_data is None:
+            return None, "TurnData is required for proposal evaluation correctness"
+
+        if not turn_data.response:
+            return None, "No workflow summary (response) available for evaluation"
+
+        prompt = PROPOSAL_EVALUATION_CORRECTNESS_PROMPT.format(
+            request=turn_data.query or "N/A",
+            workflow_summary=turn_data.response,
+        )
+
+        try:
+            llm_response = self._call_llm(prompt)
+            score, reason = self._parse_score_response(llm_response)
+
+            if score is None:
+                return (
+                    None,
+                    f"Could not parse score from LLM response: {llm_response[:100]}...",
+                )
+
+            return score, f"Proposal evaluation correctness: {score:.2f} - {reason}"
+        except LLMError as e:
+            return None, f"Proposal evaluation correctness failed: {str(e)}"

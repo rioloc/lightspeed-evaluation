@@ -122,6 +122,10 @@ class TurnData(StreamingMetricsMixin):
     proposal_status: Optional[dict[str, Any]] = Field(
         default=None, description="Raw CRD status populated by ProposalDriver"
     )
+    proposal_results: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured results from child Result CRs, populated by ProposalAmender",
+    )
 
     # Set of turn metrics that don't pass the validation to ignore them later
     _invalid_metrics: set[str] = set()
