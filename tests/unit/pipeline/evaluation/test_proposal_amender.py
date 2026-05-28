@@ -17,6 +17,7 @@ class MockCLI(CLIClient):
 
     def __init__(self, resources: Optional[dict[str, dict[str, Any]]] = None) -> None:
         """Initialize with a map of resource name -> full CR dict."""
+        super().__init__(timeout=30)
         self._resources: dict[str, dict[str, Any]] = resources or {}
 
     def run(

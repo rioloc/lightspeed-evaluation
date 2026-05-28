@@ -142,7 +142,11 @@ class ProposalDriver(AgentDriver):
         """Initialize the proposal driver."""
         super().__init__(config, enabled=enabled)
         self._cli = self._resolve_cli()
-        self._kube_cli = KubeCLI(cli_path=self._cli, namespace=self._config.namespace)
+        self._kube_cli = KubeCLI(
+            cli_path=self._cli,
+            namespace=self._config.namespace,
+            timeout=self._config.cli_timeout,
+        )
         self._amender = ProposalAmender(self._kube_cli)
 
     def validate_config(self, config: dict[str, Any]) -> ProposalAgentConfig:

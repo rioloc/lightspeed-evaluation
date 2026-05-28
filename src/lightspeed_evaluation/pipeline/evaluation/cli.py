@@ -8,11 +8,13 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-CLI_COMMAND_TIMEOUT = 30
-
 
 class CLIClient(ABC):
     """Interface for CLI operations against a Kubernetes cluster."""
+
+    def __init__(self, timeout: int) -> None:
+        """Initialize with a command timeout in seconds."""
+        self._timeout = timeout
 
     @abstractmethod
     def run(
@@ -50,8 +52,9 @@ class CLIClient(ABC):
 class KubeCLI(CLIClient):
     """Concrete CLIClient backed by oc or kubectl."""
 
-    def __init__(self, cli_path: str, namespace: str) -> None:
+    def __init__(self, cli_path: str, namespace: str, timeout: int) -> None:
         """Initialize with a resolved binary path and target namespace."""
+        super().__init__(timeout)
         self._cli = cli_path
         self._namespace = namespace
 
@@ -67,7 +70,7 @@ class KubeCLI(CLIClient):
             text=True,
             capture_output=True,
             env=os.environ.copy(),
-            timeout=CLI_COMMAND_TIMEOUT,
+            timeout=self._timeout,
             check=False,
         )
 
